@@ -9,7 +9,13 @@ class Post(models.Model):
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name="posts")
     created_at = models.DateTimeField(auto_now_add=True)
 
-    # like = models.PositiveBigIntegerField()
+    @property
+    def likes_count(self):
+        self.likes.count()
+
+    @property
+    def comments_count(self):
+        return self.comments.count()
 
     def __str__(self):
         return f"{self.author.username}: {self.content[:20]}"
