@@ -11,7 +11,7 @@ class Post(models.Model):
 
     @property
     def likes_count(self):
-        self.likes.count()
+        return self.likes.count()
 
     @property
     def comments_count(self):

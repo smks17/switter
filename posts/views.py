@@ -4,19 +4,9 @@ from django.http import JsonResponse
 from django.db import models
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view
-from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from posts.models import Post
-
-
-# TODO: move to another place
-def get_user_by_token(request):
-    auth = JWTAuthentication()
-    try:
-        user, _ = auth.authenticate(request)
-        return user
-    except Exception:
-        return None
+from users.utils import get_user_by_token
 
 
 @api_view(["POST"])
@@ -40,14 +30,46 @@ def create_post_view(request):
 def get_all_posts_view(request):
     posts = (
         Post.objects.all()
+        .annotate(
+            likes_count=models.Count("likes", distinct=True),
+            comments_count=models.Count("comments", distinct=True),
+            author_username=models.F("author__username"),
+        )
         .order_by("-created_at")
         .values(
             "id",
             "content",
             "created_at",
-            # "likes_count",
-            # "comments_count",
+            "likes_count",
+            "comments_count",
+            "author_username",
+        )
+    )
+    return JsonResponse(list(posts), safe=False)
+
+
+@api_view(["GET"])
+def get_my_posts_view(request):
+    user = get_user_by_token(request)
+    if not user:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    posts = (
+        Post.objects.filter(author=user)
+        .all()
+        .annotate(
+            likes_count=models.Count("likes"),
+            comments_count=models.Count("comments", distinct=True),
             author_username=models.F("author__username"),
+        )
+        .order_by("-created_at")
+        .values(
+            "id",
+            "content",
+            "created_at",
+            "likes_count",
+            "comments_count",
+            "author_username",
         )
     )
     return JsonResponse(list(posts), safe=False)
