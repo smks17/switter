@@ -2,20 +2,11 @@ import json
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view
-from rest_framework_simplejwt.authentication import JWTAuthentication
 
 
 from interactions.models import Comment, Like
 from posts.models import Post
-
-
-def get_user_by_token(request):
-    auth = JWTAuthentication()
-    try:
-        user, _ = auth.authenticate(request)
-        return user
-    except Exception:
-        return None
+from users.utils import get_user_by_token
 
 
 @api_view(["POST"])
@@ -51,3 +42,23 @@ def add_comment_view(request, post_id):
     return JsonResponse(
         {"message": f"Comment added to post {post_id}", "comment_id": comment.id}
     )
+
+
+@api_view(["GET"])
+def my_comments_view(request):
+    user = get_user_by_token(request)
+    if not user:
+        return JsonResponse({"error": "Authentication required"}, status=401)
+
+    comments = Comment.objects.filter(user=user).values("post", "content").all()
+    return JsonResponse(list(comments), safe=False)
+
+
+@api_view(["GET"])
+def my_likes_view(request):
+    user = get_user_by_token(request)
+    if not user:
+        return JsonResponse({"error": "Authentication required"}, status=401)
+
+    posts = Like.objects.filter(user=user).values("post").all()
+    return JsonResponse(list(posts), safe=False)
