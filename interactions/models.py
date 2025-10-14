@@ -26,3 +26,19 @@ class Comment(models.Model):
         return (
             f"{self.user.username} commented {self.content[:20]} on post {self.post.id}"
         )
+
+
+class FollowLinks(models.Model):
+    follower = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="list_followings"
+    )
+    following = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="list_followers"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("follower", "following")
+
+    def __str__(self):
+        return f"{self.follower.username} follow {self.following.username}"
