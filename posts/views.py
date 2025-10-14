@@ -1,11 +1,11 @@
 import json
 
 from django.http import JsonResponse
-from django.db import models
+from django.db import models, transaction
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view
 
-from posts.models import Post
+from posts.models import MediaPost, Post
 from users.utils import get_user_by_token
 
 
@@ -15,12 +15,14 @@ def create_post_view(request):
     if not user:
         return JsonResponse({"error": "Authentication required"}, status=401)
 
-    try:
-        data = json.loads(request.body)
-        content = data.get("content")
-    except json.JSONDecodeError:
+    content = request.POST.get("content")
+    files = request.FILES.getlist("media")
+    if not content:
         return JsonResponse({"error": "Invalid json"}, status=400)
-    post = Post.objects.create(author=user, content=content)
+    with transaction.atomic():
+        post = Post.objects.create(author=user, content=content)
+        for file in files:
+            MediaPost.objects.create(post=post, file=file)
     return JsonResponse(
         {"id": post.id, "message": "Post created successfully"}, status=201
     )
@@ -29,23 +31,24 @@ def create_post_view(request):
 @api_view(["GET"])
 def get_all_posts_view(request):
     posts = (
-        Post.objects.all()
-        .annotate(
-            likes_count=models.Count("likes", distinct=True),
-            comments_count=models.Count("comments", distinct=True),
-            author_username=models.F("author__username"),
-        )
+        Post.objects.prefetch_related("media", "likes", "comments")
+        .select_related("author")
         .order_by("-created_at")
-        .values(
-            "id",
-            "content",
-            "created_at",
-            "likes_count",
-            "comments_count",
-            "author_username",
-        )
     )
-    return JsonResponse(list(posts), safe=False)
+    result = []
+    for p in posts:
+        result.append(
+            {
+                "id": p.id,
+                "content": p.content,
+                "created_at": p.created_at,
+                "author_username": p.author.username,
+                "likes_count": p.likes_count,
+                "comments_count": p.comments_count,
+                "media": [m.file.url for m in p.media.all()],
+            }
+        )
+    return JsonResponse(result, safe=False)
 
 
 @api_view(["GET"])
@@ -92,5 +95,6 @@ def get_post_details_view(request, post_id):
             "likes": list(likes),
             "comments": list(comments),
             "created_at": post.created_at,
+            "media": [m.file.url for m in post.media.all()],
         }
     )
