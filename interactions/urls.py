@@ -3,6 +3,8 @@ from django.urls import path
 from interactions.views import (
     add_comment_view,
     follow_view,
+    followers_view,
+    followings_view,
     my_comments_view,
     my_followers_view,
     my_followings_view,
@@ -18,5 +20,7 @@ urlpatterns = [
     path("comments/me", my_comments_view),
     path("follows/<int:user_id>", follow_view),
     path("followers/me", my_followers_view),
+    path("followers/<int:user_id>", followers_view),
     path("followings/me", my_followings_view),
+    path("followings/<int:user_id>", followings_view),
 ]

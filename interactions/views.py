@@ -83,7 +83,7 @@ def follow_view(request, user_id):
         follow_link = FollowLinks.objects.filter(
             follower=curr_user,
             following=user,
-        ).get()
+        ).all()
         follow_link.delete()
         return JsonResponse({"message": f"You unfollow {user.id}"})
 
@@ -104,5 +104,19 @@ def my_followings_view(request):
     if not user:
         return JsonResponse({"error": "Authentication required"}, status=401)
 
+    followings = FollowLinks.objects.filter(follower=user).values("follower_id").all()
+    return JsonResponse(list(followings), safe=False)
+
+
+@api_view(["GET"])
+def followers_view(request, user_id):
+    user = get_object_or_404(User, id=user_id)
+    followers = FollowLinks.objects.filter(following=user).values("following_id").all()
+    return JsonResponse(list(followers), safe=False)
+
+
+@api_view(["GET"])
+def followings_view(request, user_id):
+    user = get_object_or_404(User, id=user_id)
     followings = FollowLinks.objects.filter(follower=user).values("follower_id").all()
     return JsonResponse(list(followings), safe=False)
