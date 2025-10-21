@@ -3,9 +3,12 @@ import json
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import User
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
+
+from users.utils import get_user_by_token
 
 
 @api_view(["POST"])
@@ -62,3 +65,28 @@ def signup_view(request):
             },
             status=200,
         )
+
+
+@api_view(["GET"])
+def my_user_profile_view(request):
+    user = get_user_by_token(request)
+    if not user:
+        return JsonResponse({"error": "Authentication required"}, status=401)
+    return get_user_profile(user)
+
+
+@api_view(["GET"])
+def user_profile_view(request, user_id):
+    user = get_object_or_404(User, id=user_id)
+    return get_user_profile(user)
+
+
+def get_user_profile(user: User):
+    return JsonResponse(
+        {
+            "username": user.username,
+            "number_following": user.list_followings.count(),
+            "number_follower": user.list_followers.count(),
+            # TODO: add more
+        }
+    )
