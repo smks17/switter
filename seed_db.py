@@ -6,15 +6,18 @@ from faker import Faker
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "switter.settings")
 django.setup()
 
+from django.core.files.base import ContentFile
 from django.contrib.auth import get_user_model
-from posts.models import Post
+from posts.models import MediaPost, Post
 from interactions.models import FollowLinks, Comment, Like
 
 fake = Faker()
 User = get_user_model()
 
 
-def run_seed(users=10, posts=30, comments=50, likes=80, follows=20, clear=False):
+def run_seed(
+    users=10, posts=30, media_posts=10, comments=50, likes=80, follows=20, clear=False
+):
     if clear:
         print("Clearing existing data...")
         FollowLinks.objects.all().delete()
@@ -37,11 +40,20 @@ def run_seed(users=10, posts=30, comments=50, likes=80, follows=20, clear=False)
     #######Posts#######
     posts_list = [
         Post.objects.create(
-            author=choice(users_list), content=fake.text(max_nb_chars=200)
+            author=choice(users_list),
+            content=fake.text(max_nb_chars=200),
         )
         for _ in range(posts)
     ]
+    media_posts_list = [
+        MediaPost.objects.create(
+            post=choice(posts_list),
+            file=ContentFile(fake.image(), fake.file_name(extension="jpg")),
+        )
+        for _ in range(media_posts)
+    ]
     print(f"Created {len(posts_list)} posts")
+    print(f"Created {len(media_posts_list)} media")
 
     #######Comments#######
     comments_list = [
@@ -79,4 +91,12 @@ def run_seed(users=10, posts=30, comments=50, likes=80, follows=20, clear=False)
 
 
 if __name__ == "__main__":
-    run_seed(users=10, posts=30, comments=50, likes=100, follows=20, clear=True)
+    run_seed(
+        users=10,
+        posts=30,
+        media_posts=5,
+        comments=50,
+        likes=100,
+        follows=20,
+        clear=True,
+    )
