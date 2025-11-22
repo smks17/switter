@@ -1,4 +1,4 @@
-import json
+import requests
 
 from django.http import JsonResponse
 from django.db import models, transaction
@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view
 
 from posts.models import MediaPost, Post
+from switter.settings import FEED_SERVICE_URL
 from users.utils import get_user_by_token
 
 
@@ -29,9 +30,18 @@ def create_post_view(request):
 
 
 @api_view(["GET"])
-def get_all_posts_view(request):
+def get_home_posts_view(request):
+    user = get_user_by_token(request)
+    if not user:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+    resp = requests.get(
+        f"http://{FEED_SERVICE_URL}/feed/home/{user.id}",
+        timeout=3,
+    )
+    post_ids = resp.json()["ids"]
     posts = (
-        Post.objects.prefetch_related("media", "likes", "comments")
+        Post.objects.filter(id__in=post_ids)
+        .prefetch_related("media", "likes", "comments")
         .select_related("author")
         .order_by("-created_at")
     )

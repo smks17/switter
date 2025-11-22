@@ -109,6 +109,8 @@ CACHE_MIDDLEWARE_SECONDS = 60 * 5
 CACHE_MIDDLEWARE_KEY_PREFIX = ""
 
 
+FEED_SERVICE_URL = "localhost:8080"
+
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
