@@ -1,12 +1,15 @@
 import requests
 
+from django.core.cache import cache
 from django.http import JsonResponse
 from django.db import models, transaction
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view
 
+
 from posts.models import MediaPost, Post
 from switter.settings import FEED_SERVICE_URL
+from switter.utils import create_user_cache, user_cached
 from users.utils import get_user_by_token
 
 
@@ -24,12 +27,14 @@ def create_post_view(request):
         post = Post.objects.create(author=user, content=content)
         for file in files:
             MediaPost.objects.create(post=post, file=file)
+    cache.delete(create_user_cache(user.id, "me"))
     return JsonResponse(
         {"id": post.id, "message": "Post created successfully"}, status=201
     )
 
 
 @api_view(["GET"])
+@user_cached(timeout=60)
 def get_home_posts_view(request):
     user = get_user_by_token(request)
     if not user:
@@ -85,6 +90,7 @@ def get_my_posts_view(request):
             "author_username",
         )
     )
+    cache.set(create_user_cache(user.id, "me"), list(posts), 3600)
     return JsonResponse(list(posts), safe=False)
 
 
