@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 
 
 def post_media_path(instance, filename):
-    return os.path.join("posts", str(instance.post.id), filename)
+    return os.path.join(str(instance.id), filename)
 
 
 class Post(models.Model):
@@ -27,3 +27,7 @@ class Post(models.Model):
 class MediaPost(models.Model):
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="media")
     file = models.FileField(upload_to=post_media_path)
+
+    @property
+    def url(self):
+        return f"/api/posts/media/{self.id}"

@@ -1,7 +1,8 @@
+import os
 import requests
 
 from django.core.cache import cache
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.db import models, transaction
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view
@@ -34,7 +35,7 @@ def create_post_view(request):
 
 
 @api_view(["GET"])
-@user_cached(timeout=60)
+# @user_cached(timeout=60)
 def get_home_posts_view(request):
     user = get_user_by_token(request)
     if not user:
@@ -60,7 +61,7 @@ def get_home_posts_view(request):
                 "author_username": p.author.username,
                 "likes_count": p.likes_count,
                 "comments_count": p.comments_count,
-                "media": [m.file.url for m in p.media.all()],
+                "media": [m.url for m in p.media.all()],
             }
         )
     return JsonResponse(result, safe=False)
@@ -111,6 +112,21 @@ def get_post_details_view(request, post_id):
             "likes": list(likes),
             "comments": list(comments),
             "created_at": post.created_at,
-            "media": [m.file.url for m in post.media.all()],
+            "media": [m.url for m in post.media.all()],
         }
     )
+
+
+@api_view(["GET"])
+def download_media(request, file_id):
+    media_file = get_object_or_404(MediaPost, id=file_id)
+    try:
+        response = HttpResponse(
+            media_file.file.read(), content_type="application/octet-stream"
+        )
+        response["Content-Disposition"] = (
+            f'attachment; filename="{os.path.basename(media_file.file.path)}"'
+        )
+        return response
+    except IOError:
+        return HttpResponse("File not found.", status=404)

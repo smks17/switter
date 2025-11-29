@@ -5,6 +5,7 @@ from posts.views import (
     get_my_posts_view,
     create_post_view,
     get_post_details_view,
+    download_media,
 )
 
 
@@ -13,4 +14,5 @@ urlpatterns = [
     path("me", get_my_posts_view, name="get all posts"),
     path("new", create_post_view, name="create new post"),
     path("<int:post_id>", get_post_details_view, name="post detail"),
+    path("media/<int:file_id>", download_media, name="download media"),
 ]
