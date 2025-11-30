@@ -10,7 +10,12 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import json
+import os
 from pathlib import Path
+
+import dotenv
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -18,16 +23,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 MEDIA_ROOT = BASE_DIR / "media"
 MEDIA_URL = "/media/"
 
+dotenv.load_dotenv(BASE_DIR / ".env", override=True, verbose=True)
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-iz_kgyf7)a4w6no@)x02+gtkz38s*%0_h-n4645c+s#kvzhg^s"
+SECRET_KEY = os.environ["DJANGO_KEY"]
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DEBUG_MODE", "false") == "true"
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = eval(os.environ.get("DJANGO_ALLOWED_HOSTS", "[]"))
 
 
 # Application definition
@@ -92,14 +99,17 @@ WSGI_APPLICATION = "switter.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "NAME": BASE_DIR / os.environ.get("SQLITE_FILE_NAME", "db.sqlite3"),
     }
 }
 
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379",
+        "LOCATION": f"{os.environ.get('REDIS_HOSTNAME', 'redis')}://{os.environ.get('REDIS_URL', '127.0.0.1')}:{os.environ.get('REDIS_PORT', 6374)}",
+        "OPTIONS": {
+            "PASSWORD": os.environ.get("REDIS_PASSWORD", ""),
+        },
     }
 }
 
@@ -107,7 +117,7 @@ CACHE_MIDDLEWARE_SECONDS = 60 * 5
 CACHE_MIDDLEWARE_KEY_PREFIX = ""
 
 
-FEED_SERVICE_URL = "localhost:8080"
+FEED_SERVICE_URL = os.environ["FEED_SERVICE_URL"]
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
