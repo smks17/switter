@@ -12,15 +12,25 @@ from interactions.views import (
     toggle_like_view,
 )
 
+urlpatterns = []
 
-urlpatterns = [
-    path("likes/<int:post_id>", toggle_like_view),
-    path("comments/<int:post_id>", add_comment_view),
-    path("likes/me", my_likes_view),
-    path("comments/me", my_comments_view),
-    path("follows/<int:user_id>", follow_view),
-    path("followers/me", my_followers_view),
-    path("followers/<int:user_id>", followers_view),
-    path("followings/me", my_followings_view),
-    path("followings/<int:user_id>", followings_view),
+# likes
+urlpatterns += [
+    path("posts/<int:post_id>/like/", toggle_like_view),
+    path("users/me/likes/", my_likes_view),
+]
+
+# comments
+urlpatterns += [
+    path("posts/<int:post_id>/comment/", add_comment_view),
+    path("users/me/comments/", my_comments_view),
+]
+
+# follow
+urlpatterns += [
+    path("users/<int:user_id>/follow/", follow_view),
+    path("users/me/followers/", my_followers_view),
+    path("users/<int:user_id>/followers/", followers_view),
+    path("users/me/following/", my_followings_view),
+    path("users/<int:user_id>/following/", followings_view),
 ]
