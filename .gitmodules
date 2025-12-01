@@ -1,0 +1,3 @@
+[submodule "feed-service"]
+	path = feed-service
+	url = https://github.com/smks17/feed-service.git
