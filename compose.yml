@@ -45,8 +45,8 @@ services:
       context: feed-service
       dockerfile: Dockerfile
     container_name: feed-service
-    volumes:
-      - .:/app
+    # volumes:
+    #   - ./feed-service:/app
     # ports:
     #   - "${DJANGO_PORT}:${DJANGO_PORT}"
     env_file:
