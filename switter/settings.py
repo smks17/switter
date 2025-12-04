@@ -61,6 +61,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "switter.rate_limiter.RateLimiterMiddleware",
 ]
 
 ROOT_URLCONF = "switter.urls"
@@ -97,25 +98,33 @@ WSGI_APPLICATION = "switter.wsgi.application"
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('POSTGRES_DB', 'switter_db'),
-        'USER': os.environ.get('POSTGRES_USER', 'switter_user'),
-        'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'switter_password'),
-        'HOST': os.environ.get('POSTGRES_HOST', 'postgres'),
-        'PORT': os.environ.get('POSTGRES_PORT', 5432),
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.environ.get("POSTGRES_DB", "switter_db"),
+        "USER": os.environ.get("POSTGRES_USER", "switter_user"),
+        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "switter_password"),
+        "HOST": os.environ.get("POSTGRES_HOST", "postgres"),
+        "PORT": os.environ.get("POSTGRES_PORT", 5432),
     }
 }
 
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": f"{os.environ.get('REDIS_HOSTNAME', 'redis')}://{os.environ.get('REDIS_URL', '127.0.0.1')}:{os.environ.get('REDIS_PORT', 6374)}",
+        "LOCATION": f"redis://{os.environ.get('REDIS_HOSTNAME', '127.0.0.1')}:{os.environ.get('REDIS_PORT', 6379)}/{os.environ.get('DJANGO_REDIS_DB', 1)}",
         "OPTIONS": {
             "PASSWORD": os.environ.get("REDIS_PASSWORD", ""),
         },
-    }
+    },
+    "rate_limiter": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": f"redis://{os.environ.get('REDIS_HOSTNAME', '127.0.0.1')}:{os.environ.get('REDIS_PORT', 6379)}/{os.environ.get('RATE_LIMITER_REDIS_DB', 2)}",
+        "OPTIONS": {
+            "PASSWORD": os.environ.get("REDIS_PASSWORD", ""),
+        },
+    },
 }
+
 
 CACHE_MIDDLEWARE_SECONDS = 60 * 5
 CACHE_MIDDLEWARE_KEY_PREFIX = ""
