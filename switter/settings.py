@@ -110,17 +110,19 @@ DATABASES = {
 
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": f"redis://{os.environ.get('REDIS_HOSTNAME', '127.0.0.1')}:{os.environ.get('REDIS_PORT', 6379)}/{os.environ.get('DJANGO_REDIS_DB', 1)}",
         "OPTIONS": {
             "PASSWORD": os.environ.get("REDIS_PASSWORD", ""),
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },
     },
     "rate_limiter": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": f"redis://{os.environ.get('REDIS_HOSTNAME', '127.0.0.1')}:{os.environ.get('REDIS_PORT', 6379)}/{os.environ.get('RATE_LIMITER_REDIS_DB', 2)}",
         "OPTIONS": {
             "PASSWORD": os.environ.get("REDIS_PASSWORD", ""),
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },
     },
 }
