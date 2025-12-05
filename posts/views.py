@@ -35,13 +35,46 @@ def create_post_view(request):
 
 
 @api_view(["GET"])
-# @user_cached(timeout=60)
+@user_cached(timeout=60)
 def get_home_posts_view(request):
     user = get_user_by_token(request)
     if not user:
         return JsonResponse({"error": "Unauthorized"}, status=401)
     resp = requests.get(
         f"http://{FEED_SERVICE_URL}/feed/home/{user.id}",
+        timeout=3,
+    )
+    post_ids = resp.json()["ids"]
+    posts = (
+        Post.objects.filter(id__in=post_ids)
+        .prefetch_related("media", "likes", "comments")
+        .select_related("author")
+        .order_by("-created_at")
+    )
+    result = []
+    for p in posts:
+        result.append(
+            {
+                "id": p.id,
+                "content": p.content,
+                "created_at": p.created_at,
+                "author_username": p.author.username,
+                "likes_count": p.likes_count,
+                "comments_count": p.comments_count,
+                "media": [m.url for m in p.media.all()],
+            }
+        )
+    return JsonResponse(result, safe=False)
+
+
+@api_view(["GET"])
+@user_cached(timeout=60)
+def get_explore_posts_view(request):
+    user = get_user_by_token(request)
+    if not user:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+    resp = requests.get(
+        f"http://{FEED_SERVICE_URL}/feed/explore/{user.id}",
         timeout=3,
     )
     post_ids = resp.json()["ids"]
