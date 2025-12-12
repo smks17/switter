@@ -139,6 +139,7 @@ KAFKA_POST_TOPIC = os.environ.get("KAFKA_POST_TOPIC", "switter-post-events")
 KAFKA_INTERACTION_TOPIC = os.environ.get(
     "KAFKA_INTERACTION_TOPIC", "switter-interaction-events"
 )
+USE_KAFKA = os.environ.get("USE_KAFKA", "false") == "true"
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
