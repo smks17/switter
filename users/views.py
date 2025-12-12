@@ -1,92 +1,54 @@
-import json
-
-from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import User
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.views import APIView
+from rest_framework import status, permissions
+from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 
-from users.utils import get_user_by_token
+from users.serializer import LoginSerializer, SignUpSerializer, UserSerializer
 
 
-@api_view(["POST"])
-@permission_classes([AllowAny])
-def login_view(request):
-    try:
-        data = json.loads(request.body)
-        username = data.get("username")
-        password = data.get("password")
-    except json.JSONDecodeError:
-        return JsonResponse({"error": "Invalid json"}, status=400)
+class SignUpView(APIView):
+    permission_classes = [AllowAny]
 
-    user = authenticate(username=username, password=password)
-    if user is not None:
-        refresh = RefreshToken.for_user(user)
-        return JsonResponse(
-            {
-                "refresh": str(refresh),
-                "access": str(refresh.access_token),
-                "message": "User login successfully",
-                "username": user.username,
-                "user_id": user.id,
-            },
-            status=200,
-        )
-    else:
-        return JsonResponse(
-            {"error": "Invalid credential"},
-            status=401,
-        )
+    def post(self, request):
+        serializer = SignUpSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            return JsonResponse(
+                {
+                    "id": user.id,
+                    "username": user.username,
+                    "email": user.email,
+                    "message": "User created successfully",
+                },
+                status=200,
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(["POST"])
-@permission_classes([AllowAny])
-def signup_view(request):
-    try:
-        data = json.loads(request.body)
-        username = data.get("username")
-        password = data.get("password")
-    except json.JSONDecodeError:
-        return JsonResponse({"error": "Invalid json"}, status=400)
-    if User.objects.filter(username=username).exists():
-        return JsonResponse({"error": "User is already exists"}, status=400)
-    else:
-        user = User(username=username)
-        user.set_password(password)
-        user.save()
-        return JsonResponse(
-            {
-                "id": user.id,
-                "username": user.username,
-                "email": user.email,
-                "message": "User created successfully",
-            },
-            status=200,
-        )
+class LoginView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = LoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.validated_data)
 
 
-@api_view(["GET"])
-def my_user_profile_view(request):
-    user = get_user_by_token(request)
-    if not user:
-        return JsonResponse({"error": "Authentication required"}, status=401)
-    return get_user_profile(user)
+class MyProfileView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data)
 
 
-@api_view(["GET"])
-def user_profile_view(request, user_id):
-    user = get_object_or_404(User, id=user_id)
-    return get_user_profile(user)
+class UserProfileView(APIView):
+    permission_classes = [permissions.AllowAny]
 
-
-def get_user_profile(user: User):
-    return JsonResponse(
-        {
-            "username": user.username,
-            "number_following": user.list_followings.count(),
-            "number_follower": user.list_followers.count(),
-            # TODO: add more
-        }
-    )
+    def get(self, request, user_id):
+        user = get_object_or_404(User, id=user_id)
+        serializer = UserSerializer(user)
+        return Response(serializer.data)

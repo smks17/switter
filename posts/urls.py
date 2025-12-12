@@ -1,19 +1,11 @@
+from rest_framework.routers import DefaultRouter
 from django.urls import path
 
-from posts.views import (
-    get_home_posts_view,
-    get_my_posts_view,
-    create_post_view,
-    get_post_details_view,
-    download_media,
-)
+from posts.views import PostViewSet, DownloadView
 
 
-urlpatterns = [
-    path("", get_home_posts_view, name="get home posts"),
-    path("", create_post_view, name="create new post"),
-    path("explore/", get_home_posts_view, name="get explore posts"),
-    path("me/", get_my_posts_view, name="get my posts"),
-    path("<int:post_id>/", get_post_details_view, name="post detail"),
-    path("media/<int:file_id>/", download_media, name="download media"),
+router = DefaultRouter()
+router.register("", PostViewSet, "posts")
+urlpatterns = router.urls + [
+    path("media/<int:file_id>/", DownloadView.as_view(), name="download media"),
 ]

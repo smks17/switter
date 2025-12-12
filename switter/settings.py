@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     "users",
     "posts",
     "interactions",
+    "django_extensions",
 ]
 
 MIDDLEWARE = [

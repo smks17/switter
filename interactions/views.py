@@ -1,122 +1,104 @@
-import json
 from django.contrib.auth.models import User
-from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
-from rest_framework.decorators import api_view
+from rest_framework import permissions, viewsets
+from rest_framework.response import Response
+from rest_framework.decorators import action
 
 
 from interactions.models import Comment, FollowLinks, Like
+from interactions.serializer import CommentSerializer, FollowSerializer, LikeSerializer
 from posts.models import Post
-from users.utils import get_user_by_token
 
 
-@api_view(["POST"])
-def toggle_like_view(request, post_id):
-    user = get_user_by_token(request)
-    if not user:
-        return JsonResponse({"error": "Authentication required"}, status=401)
+class LikeViewSet(viewsets.ModelViewSet):
+    queryset = Like.objects.all().select_related("author")
+    serializer_class = LikeSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
-    post = get_object_or_404(Post, id=post_id)
-    like, created = Like.objects.get_or_create(user=user, post=post)
-    if created:
-        return JsonResponse({"message": f"Liked post {post_id}"})
-    else:
-        like.delete()
-        return JsonResponse({"message": f"Unliked post {post_id}"})
+    @action(methods=["post"], url_path="posts/(?P<post_id>[^/.]+)/like", detail=False)
+    def toggle_like(self, request, post_id=None):
+        post = get_object_or_404(Post, id=post_id)
+        like, created = Like.objects.get_or_create(user=request.user, post=post)
+        if not created:
+            like.delete()
+            return Response({"liked": False})
+        return Response({"liked": True})
+
+    @action(methods=["get"], url_path="posts/(?P<post_id>[^/.]+)/likes", detail=False)
+    def get_post_like(self, request, post_id=None):
+        post = get_object_or_404(Post, id=post_id)
+        likes = post.comments.select_related("user").order_by("-created_at")
+        serializer = LikeSerializer(likes, many=True)
+        return Response(serializer.data)
+
+    @action(methods=["get"], url_path="users/me/likes", detail=False)
+    def my_likes(self, request):
+        likes = Like.objects.filter(user=request.user).select_related("user", "post")
+        serializer = LikeSerializer(likes, many=True)
+        return Response(serializer.data)
 
 
-@api_view(["POST"])
-def add_comment_view(request, post_id):
-    user = get_user_by_token(request)
-    if not user:
-        return JsonResponse({"error": "Authentication required"}, status=401)
+class CommentViewSet(viewsets.ModelViewSet):
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
-    post = get_object_or_404(Post, id=post_id)
-
-    try:
-        data = json.loads(request.body)
-        content = data["content"]
-    except Exception:
-        return JsonResponse({"error": "Invalid JSON"}, status=400)
-
-    comment = Comment.objects.create(user=user, post=post, content=content)
-    return JsonResponse(
-        {"message": f"Comment added to post {post_id}", "comment_id": comment.id}
+    @action(
+        methods=["post"], url_path="posts/(?P<post_id>[^/.]+)/comment", detail=False
     )
+    def add_comment(self, request, post_id=None):
+        post = get_object_or_404(Post, id=post_id)
+        serializer = CommentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(author=request.user, post=post)
+        return Response(serializer.data)
 
+    @action(
+        methods=["get"],
+        url_path="posts/(?P<post_id>[^/.]+)/comments",
+        detail=False,
+    )
+    def get_post_comments(self, request, post_id=None):
+        post = get_object_or_404(Post, id=post_id)
+        comments = post.comments.select_related("user").order_by("-created_at")
+        serializer = CommentSerializer(comments, many=True)
+        return Response(serializer.data)
 
-@api_view(["GET"])
-def my_comments_view(request):
-    user = get_user_by_token(request)
-    if not user:
-        return JsonResponse({"error": "Authentication required"}, status=401)
-
-    comments = Comment.objects.filter(user=user).values("post", "content").all()
-    return JsonResponse(list(comments), safe=False)
-
-
-@api_view(["GET"])
-def my_likes_view(request):
-    user = get_user_by_token(request)
-    if not user:
-        return JsonResponse({"error": "Authentication required"}, status=401)
-
-    posts = Like.objects.filter(user=user).values("post").all()
-    return JsonResponse(list(posts), safe=False)
-
-
-@api_view(["POST", "DELETE"])
-def follow_view(request, user_id):
-    curr_user = get_user_by_token(request)
-    if not curr_user:
-        return JsonResponse({"error": "Authentication required"}, status=401)
-
-    user = get_object_or_404(User, id=user_id)
-    assert user.id != curr_user.id
-    if request.method == "POST":
-        FollowLinks.objects.create(
-            follower=curr_user,
-            following=user,
+    @action(methods=["get"], url_path="users/me/comments", detail=False)
+    def my_comments(self, request):
+        comments = Comment.objects.filter(user=request.user).select_related(
+            "user", "post"
         )
-        return JsonResponse({"message": f"You started following {user.id}"})
-    elif request.method == "DELETE":
-        follow_link = FollowLinks.objects.filter(
-            follower=curr_user,
-            following=user,
-        ).all()
-        follow_link.delete()
-        return JsonResponse({"message": f"You unfollow {user.id}"})
+        serializer = CommentSerializer(comments, many=True)
+        return Response(serializer.data)
 
 
-@api_view(["GET"])
-def my_followers_view(request):
-    user = get_user_by_token(request)
-    if not user:
-        return JsonResponse({"error": "Authentication required"}, status=401)
+class FollowViewSet(viewsets.ModelViewSet):
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
-    followers = FollowLinks.objects.filter(following=user).values("following_id").all()
-    return JsonResponse(list(followers), safe=False)
+    @action(methods=["post"], url_path="users/(?P<user_id>[^/.]+)/follow", detail=False)
+    def toggle_follow(self, request, user_id=None):
+        following_user = get_object_or_404(User, id=user_id)
+        obj, created = FollowLinks.objects.get_or_create(
+            follower=request.user, following=following_user
+        )
+        if not created:
+            obj.delete()
+            return Response({"follow": False})
+        return Response({"follow": True})
 
+    @action(
+        methods=["get"], url_path="users/(?P<user_id>[^/.]+)/following", detail=False
+    )
+    def get_user_followings(self, request, user_id=None):
+        user = get_object_or_404(User, id=user_id)
+        followings = FollowLinks.objects.filter(follower=user)
+        serializer = FollowSerializer(followings, many=True)
+        return Response(serializer.data)
 
-@api_view(["GET"])
-def my_followings_view(request):
-    user = get_user_by_token(request)
-    if not user:
-        return JsonResponse({"error": "Authentication required"}, status=401)
-
-    followings = FollowLinks.objects.filter(follower=user).values("follower_id").all()
-    return JsonResponse(list(followings), safe=False)
-
-
-@api_view(["GET"])
-def followers_view(request, user_id):
-    user = get_object_or_404(User, id=user_id)
-    followers = FollowLinks.objects.filter(following=user).values("following_id").all()
-    return JsonResponse(list(followers), safe=False)
-
-
-@api_view(["GET"])
-def followings_view(request, user_id):
-    user = get_object_or_404(User, id=user_id)
-    followings = FollowLinks.objects.filter(follower=user).values("follower_id").all()
-    return JsonResponse(list(followings), safe=False)
+    @action(
+        methods=["get"], url_path="users/(?P<user_id>[^/.]+)/follower", detail=False
+    )
+    def get_user_followers(self, request, user_id=None):
+        user = get_object_or_404(User, id=user_id)
+        followers = FollowLinks.objects.filter(following=user)
+        serializer = FollowSerializer(followers, many=True)
+        return Response(serializer.data)
