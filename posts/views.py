@@ -12,6 +12,7 @@ from rest_framework.decorators import action
 
 from posts.models import MediaPost, Post
 from posts.serializer import PostSerializer
+from switter.kafka_producer import SwitterKafkaProducer
 from switter.settings import FEED_SERVICE_URL
 from switter.utils import user_cached
 
@@ -56,6 +57,8 @@ class PostViewSet(viewsets.ModelViewSet):
             post = Post.objects.create(author=user, content=content)
             for f in files:
                 MediaPost.objects.create(post=post, file=f)
+
+        SwitterKafkaProducer().event_post(post)
 
         return Response(
             {"id": post.id, "message": "Post created successfully"},

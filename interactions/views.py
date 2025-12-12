@@ -8,6 +8,7 @@ from rest_framework.decorators import action
 from interactions.models import Comment, FollowLinks, Like
 from interactions.serializer import CommentSerializer, FollowSerializer, LikeSerializer
 from posts.models import Post
+from switter.kafka_producer import SwitterKafkaProducer
 
 
 class LikeViewSet(viewsets.ModelViewSet):
@@ -22,6 +23,8 @@ class LikeViewSet(viewsets.ModelViewSet):
         if not created:
             like.delete()
             return Response({"liked": False})
+
+        SwitterKafkaProducer().event_interaction(like)
         return Response({"liked": True})
 
     @action(methods=["get"], url_path="posts/(?P<post_id>[^/.]+)/likes", detail=False)
@@ -48,7 +51,8 @@ class CommentViewSet(viewsets.ModelViewSet):
         post = get_object_or_404(Post, id=post_id)
         serializer = CommentSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(author=request.user, post=post)
+        obj = serializer.save(user=request.user, post=post)
+        SwitterKafkaProducer().event_interaction(obj)
         return Response(serializer.data)
 
     @action(
@@ -83,6 +87,7 @@ class FollowViewSet(viewsets.ModelViewSet):
         if not created:
             obj.delete()
             return Response({"follow": False})
+        SwitterKafkaProducer().event_interaction(obj)
         return Response({"follow": True})
 
     @action(

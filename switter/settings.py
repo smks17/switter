@@ -10,11 +10,11 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
-import json
 import os
 from pathlib import Path
 
 import dotenv
+from kafka import KafkaProducer
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -51,7 +51,6 @@ INSTALLED_APPS = [
     "users",
     "posts",
     "interactions",
-    "django_extensions",
 ]
 
 MIDDLEWARE = [
@@ -134,6 +133,12 @@ CACHE_MIDDLEWARE_KEY_PREFIX = ""
 
 
 FEED_SERVICE_URL = os.environ["FEED_SERVICE_URL"]
+
+KAFKA_URL = os.environ.get("KAFKA_URL", "localhost:9092")
+KAFKA_POST_TOPIC = os.environ.get("KAFKA_POST_TOPIC", "switter-post-events")
+KAFKA_INTERACTION_TOPIC = os.environ.get(
+    "KAFKA_INTERACTION_TOPIC", "switter-interaction-events"
+)
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
