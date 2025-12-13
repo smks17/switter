@@ -12,9 +12,7 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
-COPY entrypoint.sh /tmp/entrypoint.sh
-RUN cat /tmp/entrypoint.sh | tr -d '\r' > /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
+EXPOSE 8000
 
 # Run Django’s server
 CMD ["/bin/sh", "-c", "python manage.py migrate --noinput && gunicorn switter.wsgi:application --bind ${DJANGO_HOST}:${DJANGO_PORT} --workers ${DJANGO_NUM_WORKERS} --timeout 120 --log-level ${DJANGO_LOG_LEVEL}"]
