@@ -138,7 +138,7 @@ Kafka and PostgreSQL must be running separately in this mode.
 
 ## TODO:
 
-- [ ] Better error handling
+- [x] Better error handling
 - [ ] Using better context in feed-service
 - [ ] More API for user profile and settings
 - [ ] Complicated feed explore

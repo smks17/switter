@@ -62,6 +62,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "switter.rate_limiter.RateLimiterMiddleware",
+    "switter.exception_handler.ExceptionHandlerMiddleware",
 ]
 
 ROOT_URLCONF = "switter.urls"
