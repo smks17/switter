@@ -139,7 +139,7 @@ Kafka and PostgreSQL must be running separately in this mode.
 ## TODO:
 
 - [x] Better error handling
-- [ ] Using better context in feed-service
+- [x] Using better context in feed-service
 - [ ] More API for user profile and settings
 - [ ] Complicated feed explore
 - [ ] Using celery or Kafka for background task
