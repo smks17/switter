@@ -66,6 +66,21 @@ class PostViewSet(viewsets.ModelViewSet):
             status=status.HTTP_201_CREATED,
         )
 
+    def destroy(self, request, *args, **kwargs):
+        post = self.get_object()
+
+        if post.author != request.user:
+            return Response(
+                {"error": "You can not delete other user's post"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        post.delete()
+        return Response(
+            {"message": "Post deleted successfully"},
+            status=status.HTTP_204_NO_CONTENT,
+        )
+
     # Post detail
     def retrieve(self, request, pk=None):
         post = get_object_or_404(self.get_queryset(), pk=pk)
