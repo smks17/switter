@@ -13,7 +13,7 @@ from rest_framework.decorators import action
 from posts.models import MediaPost, Post
 from posts.serializer import PostSerializer
 from switter.kafka_producer import SwitterKafkaProducer
-from switter.settings import FEED_SERVICE_URL, USE_KAFKA
+from switter.settings import FEED_SERVICE_TOKEN, FEED_SERVICE_URL, USE_KAFKA
 from switter.utils import user_cached
 
 
@@ -35,6 +35,7 @@ class PostViewSet(viewsets.ModelViewSet):
 
         resp = requests.get(
             f"http://{FEED_SERVICE_URL}/feed/home/{user.id}",
+            headers={"X-Internal-Token": FEED_SERVICE_TOKEN},
             timeout=3,
         )
         post_ids = resp.json()["ids"]
@@ -93,6 +94,7 @@ class PostViewSet(viewsets.ModelViewSet):
         user = request.user
         resp = requests.get(
             f"http://{FEED_SERVICE_URL}/feed/explore/{user.id}",
+            headers={"X-Internal-Token": FEED_SERVICE_TOKEN},
             timeout=3,
         )
         post_ids = resp.json()["ids"]
