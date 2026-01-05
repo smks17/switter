@@ -28,7 +28,7 @@ class Migration(migrations.Migration):
             name='MediaPost',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('file', models.FileField(upload_to=pathlib.PurePosixPath('/home/mahdi/Documents/code/switter/media'))),
+                ('file', models.FileField(upload_to=pathlib.PurePosixPath('./media'))),
                 ('post', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='media', to='posts.post')),
             ],
         ),
