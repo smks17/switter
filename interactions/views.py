@@ -8,7 +8,7 @@ from interactions.models import FollowLinks, Like, Comment
 from interactions.serializer import FollowSerializer, LikeSerializer, CommentSerializer
 from posts.models import Post
 from switter.kafka_producer import SwitterKafkaProducer
-from switter.settings import USE_KAFKA
+from switter.settings import KAFKA_INTERACTION_TOPIC, USE_KAFKA
 from switter.utils import user_cached
 
 
@@ -27,7 +27,7 @@ class PostInteractionViewSet(viewsets.ViewSet):
                 status=status.HTTP_409_CONFLICT,
             )
         if USE_KAFKA:
-            SwitterKafkaProducer().event_interaction(like)
+            SwitterKafkaProducer.event(KAFKA_INTERACTION_TOPIC, like, "like")
         return Response(
             LikeSerializer(like).data,
             status=status.HTTP_201_CREATED,
@@ -41,7 +41,7 @@ class PostInteractionViewSet(viewsets.ViewSet):
             return Response(status=status.HTTP_204_NO_CONTENT)
         like.delete()
         if USE_KAFKA:
-            SwitterKafkaProducer().event_interaction(like)
+            SwitterKafkaProducer.event(KAFKA_INTERACTION_TOPIC, like, "unlike")
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @likes.mapping.get
@@ -66,7 +66,7 @@ class PostInteractionViewSet(viewsets.ViewSet):
         serializer.is_valid(raise_exception=True)
         comment = serializer.save(user=request.user, post=post)
         if USE_KAFKA:
-            SwitterKafkaProducer().event_interaction(comment)
+            SwitterKafkaProducer.event(KAFKA_INTERACTION_TOPIC, comment, "comment")
         return Response(
             serializer.data,
             status=status.HTTP_201_CREATED,
@@ -96,7 +96,7 @@ class UserInteractionViewSet(viewsets.ViewSet):
                 status=status.HTTP_409_CONFLICT,
             )
         if USE_KAFKA:
-            SwitterKafkaProducer().event_interaction(follow)
+            SwitterKafkaProducer.event(KAFKA_INTERACTION_TOPIC, follow, "follow")
         return Response(
             FollowSerializer(follow).data,
             status=status.HTTP_201_CREATED,
@@ -113,7 +113,7 @@ class UserInteractionViewSet(viewsets.ViewSet):
             return Response(status=status.HTTP_204_NO_CONTENT)
         follow.delete()
         if USE_KAFKA:
-            SwitterKafkaProducer().event_interaction(follow)
+            SwitterKafkaProducer.event(KAFKA_INTERACTION_TOPIC, follow, "unfollow")
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @followers.mapping.get

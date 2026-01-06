@@ -13,7 +13,12 @@ from rest_framework.decorators import action
 from posts.models import MediaPost, Post
 from posts.serializer import PostSerializer
 from switter.kafka_producer import SwitterKafkaProducer
-from switter.settings import FEED_SERVICE_TOKEN, FEED_SERVICE_URL, USE_KAFKA
+from switter.settings import (
+    FEED_SERVICE_TOKEN,
+    FEED_SERVICE_URL,
+    KAFKA_POST_TOPIC,
+    USE_KAFKA,
+)
 from switter.utils import user_cached
 
 
@@ -60,7 +65,7 @@ class PostViewSet(viewsets.ModelViewSet):
                 MediaPost.objects.create(post=post, file=f)
 
         if USE_KAFKA:
-            SwitterKafkaProducer().event_post(post)
+            SwitterKafkaProducer.event(KAFKA_POST_TOPIC, post, "create_post")
 
         return Response(
             {"id": post.id, "message": "Post created successfully"},
@@ -77,6 +82,9 @@ class PostViewSet(viewsets.ModelViewSet):
             )
 
         post.delete()
+        if USE_KAFKA:
+            SwitterKafkaProducer.event(KAFKA_POST_TOPIC, post, "destroy_post")
+
         return Response(
             {"message": "Post deleted successfully"},
             status=status.HTTP_204_NO_CONTENT,
