@@ -122,6 +122,8 @@ class PostViewSet(viewsets.ModelViewSet):
 
 
 class DownloadView(APIView):
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
     def get(self, request, file_id):
         media_file = get_object_or_404(MediaPost, id=file_id)
         try:
