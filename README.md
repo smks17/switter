@@ -1,6 +1,9 @@
 # Switter
 
-Switter is a simple **RESTful social network project** built with **Django** and designed with a **microservices-friendly architecture**. The project uses **Apache Kafka** for asynchronous communication between services and is fully runnable using **Docker Compose**.
+Switter is a simple **RESTful social network project** built with **Django** and **Golang**, designed with a **microservices-friendly architecture**.
+The core API is implemented using **Django REST Framework**, while a dedicated **Feed Service written in Go** is responsible for generating and serving user feeds.
+
+The project uses **Apache Kafka** for asynchronous communication between services and is fully runnable using **Docker Compose**.
 
 ---
 
