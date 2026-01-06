@@ -1,113 +1,153 @@
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
-from rest_framework import permissions, viewsets
-from rest_framework.response import Response
+from rest_framework import permissions, viewsets, status
 from rest_framework.decorators import action
+from rest_framework.response import Response
 
-
-from interactions.models import Comment, FollowLinks, Like
-from interactions.serializer import CommentSerializer, FollowSerializer, LikeSerializer
+from interactions.models import FollowLinks, Like, Comment
+from interactions.serializer import FollowSerializer, LikeSerializer, CommentSerializer
 from posts.models import Post
 from switter.kafka_producer import SwitterKafkaProducer
 from switter.settings import USE_KAFKA
+from switter.utils import user_cached
 
 
-class LikeViewSet(viewsets.ModelViewSet):
-    queryset = Like.objects.all().select_related("author")
-    serializer_class = LikeSerializer
+class PostInteractionViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
-    @action(methods=["post"], url_path="posts/(?P<post_id>[^/.]+)/like", detail=False)
-    def toggle_like(self, request, post_id=None):
-        post = get_object_or_404(Post, id=post_id)
+    # -------- Likes --------
+
+    @action(detail=True, methods=["post"])
+    def likes(self, request, pk=None):
+        post = get_object_or_404(Post, pk=pk)
         like, created = Like.objects.get_or_create(user=request.user, post=post)
         if not created:
-            like.delete()
-            return Response({"liked": False})
-
+            return Response(
+                {"detail": "Already liked"},
+                status=status.HTTP_409_CONFLICT,
+            )
         if USE_KAFKA:
             SwitterKafkaProducer().event_interaction(like)
-        return Response({"liked": True})
+        return Response(
+            LikeSerializer(like).data,
+            status=status.HTTP_201_CREATED,
+        )
 
-    @action(methods=["get"], url_path="posts/(?P<post_id>[^/.]+)/likes", detail=False)
-    def get_post_like(self, request, post_id=None):
-        post = get_object_or_404(Post, id=post_id)
-        likes = post.comments.select_related("user").order_by("-created_at")
-        serializer = LikeSerializer(likes, many=True)
-        return Response(serializer.data)
+    @likes.mapping.delete
+    def unlike(self, request, pk=None):
+        post = get_object_or_404(Post, pk=pk)
+        like = Like.objects.filter(user=request.user, post=post).first()
+        if not like:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        like.delete()
+        if USE_KAFKA:
+            SwitterKafkaProducer().event_interaction(like)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(methods=["get"], url_path="users/me/likes", detail=False)
-    def my_likes(self, request):
-        likes = Like.objects.filter(user=request.user).select_related("user", "post")
-        serializer = LikeSerializer(likes, many=True)
-        return Response(serializer.data)
+    @likes.mapping.get
+    def list_likes(self, request, pk=None):
+        post = get_object_or_404(Post, pk=pk)
+        likes = Like.objects.filter(post=post).select_related("user")
+        return Response(LikeSerializer(likes, many=True).data)
 
+    # -------- Comments --------
 
-class CommentViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
-
-    @action(
-        methods=["post"], url_path="posts/(?P<post_id>[^/.]+)/comment", detail=False
-    )
-    def add_comment(self, request, post_id=None):
-        post = get_object_or_404(Post, id=post_id)
+    @action(detail=True, methods=["post", "get"])
+    def comments(self, request, pk=None):
+        post = get_object_or_404(Post, pk=pk)
+        if request.method == "GET":
+            comments = (
+                Comment.objects.filter(post=post)
+                .select_related("user")
+                .order_by("-created_at")
+            )
+            return Response(CommentSerializer(comments, many=True).data)
         serializer = CommentSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        obj = serializer.save(user=request.user, post=post)
+        comment = serializer.save(user=request.user, post=post)
         if USE_KAFKA:
-            SwitterKafkaProducer().event_interaction(obj)
-        return Response(serializer.data)
-
-    @action(
-        methods=["get"],
-        url_path="posts/(?P<post_id>[^/.]+)/comments",
-        detail=False,
-    )
-    def get_post_comments(self, request, post_id=None):
-        post = get_object_or_404(Post, id=post_id)
-        comments = post.comments.select_related("user").order_by("-created_at")
-        serializer = CommentSerializer(comments, many=True)
-        return Response(serializer.data)
-
-    @action(methods=["get"], url_path="users/me/comments", detail=False)
-    def my_comments(self, request):
-        comments = Comment.objects.filter(user=request.user).select_related(
-            "user", "post"
+            SwitterKafkaProducer().event_interaction(comment)
+        return Response(
+            serializer.data,
+            status=status.HTTP_201_CREATED,
         )
-        serializer = CommentSerializer(comments, many=True)
-        return Response(serializer.data)
 
 
-class FollowViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+class UserInteractionViewSet(viewsets.ViewSet):
+    permission_classes = [permissions.IsAuthenticated]
 
-    @action(methods=["post"], url_path="users/(?P<user_id>[^/.]+)/follow", detail=False)
-    def toggle_follow(self, request, user_id=None):
-        following_user = get_object_or_404(User, id=user_id)
-        obj, created = FollowLinks.objects.get_or_create(
-            follower=request.user, following=following_user
+    # -------- Followers --------
+
+    @action(detail=True, methods=["post"], url_name="follow")
+    def followers(self, request, pk=None):
+        user = get_object_or_404(User, pk=pk)
+        if user == request.user:
+            return Response(
+                {"detail": "Cannot follow yourself"},
+                status=status.HTTP_409_CONFLICT,
+            )
+        follow, created = FollowLinks.objects.get_or_create(
+            follower=request.user,
+            following=user,
         )
         if not created:
-            obj.delete()
-            return Response({"follow": False})
+            return Response(
+                {"detail": "Already following"},
+                status=status.HTTP_409_CONFLICT,
+            )
         if USE_KAFKA:
-            SwitterKafkaProducer().event_interaction(obj)
-        return Response({"follow": True})
+            SwitterKafkaProducer().event_interaction(follow)
+        return Response(
+            FollowSerializer(follow).data,
+            status=status.HTTP_201_CREATED,
+        )
 
-    @action(
-        methods=["get"], url_path="users/(?P<user_id>[^/.]+)/following", detail=False
-    )
-    def get_user_followings(self, request, user_id=None):
-        user = get_object_or_404(User, id=user_id)
-        followings = FollowLinks.objects.filter(follower=user)
-        serializer = FollowSerializer(followings, many=True)
-        return Response(serializer.data)
+    @followers.mapping.delete
+    def unfollow(self, request, pk=None):
+        user = get_object_or_404(User, pk=pk)
+        follow = FollowLinks.objects.filter(
+            follower=request.user,
+            following=user,
+        ).first()
+        if not follow:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        follow.delete()
+        if USE_KAFKA:
+            SwitterKafkaProducer().event_interaction(follow)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(
-        methods=["get"], url_path="users/(?P<user_id>[^/.]+)/follower", detail=False
-    )
-    def get_user_followers(self, request, user_id=None):
-        user = get_object_or_404(User, id=user_id)
+    @followers.mapping.get
+    def list_followers(self, request, pk=None):
+        user = get_object_or_404(User, id=pk)
         followers = FollowLinks.objects.filter(following=user)
         serializer = FollowSerializer(followers, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=["get"], url_path="me/followers")
+    @user_cached()
+    def my_followers(self, request):
+        follower = FollowLinks.objects.filter(following=request.user).select_related(
+            "follower"
+        )
+
+        serializer = FollowSerializer(follower, many=True)
+        return Response(serializer.data)
+
+    # -------- Following --------
+
+    @action(detail=True, methods=["get"], url_path="followings")
+    def list_following(self, request, pk=None):
+        user = get_object_or_404(User, id=pk)
+        followers = FollowLinks.objects.filter(follower=user)
+        serializer = FollowSerializer(followers, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=["get"], url_path="me/followings")
+    @user_cached()
+    def my_following(self, request):
+        following = FollowLinks.objects.filter(follower=request.user).select_related(
+            "following"
+        )
+
+        serializer = FollowSerializer(following, many=True)
         return Response(serializer.data)

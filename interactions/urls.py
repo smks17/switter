@@ -1,14 +1,9 @@
-from interactions.views import (
-    CommentViewSet,
-    FollowViewSet,
-    LikeViewSet,
-)
-
 from rest_framework.routers import DefaultRouter
 
+from interactions.views import PostInteractionViewSet, UserInteractionViewSet
+
 router = DefaultRouter()
-router.register("", LikeViewSet, "likes")
-router.register("", CommentViewSet, "comments")
-router.register("", FollowViewSet, "follow")
+router.register("posts", PostInteractionViewSet, basename="post-interactions")
+router.register("users", UserInteractionViewSet, basename="user-interactions")
 
 urlpatterns = router.urls
