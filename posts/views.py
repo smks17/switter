@@ -117,10 +117,6 @@ class PostViewSet(viewsets.ModelViewSet):
 
         queryset = (
             Post.objects.filter(author=user)
-            .annotate(
-                likes_count=Count("likes"),
-                comments_count=Count("comments", distinct=True),
-            )
             .select_related("author")
             .prefetch_related("media")
             .order_by("-created_at")
