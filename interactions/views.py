@@ -79,7 +79,7 @@ class UserInteractionViewSet(viewsets.ViewSet):
     # -------- Followers --------
 
     @action(detail=True, methods=["post"], url_name="follow")
-    def followers(self, request, pk=None):
+    def follow(self, request, pk=None):
         user = get_object_or_404(User, pk=pk)
         if user == request.user:
             return Response(
@@ -102,7 +102,7 @@ class UserInteractionViewSet(viewsets.ViewSet):
             status=status.HTTP_201_CREATED,
         )
 
-    @followers.mapping.delete
+    @follow.mapping.delete
     def unfollow(self, request, pk=None):
         user = get_object_or_404(User, pk=pk)
         follow = FollowLinks.objects.filter(
@@ -116,7 +116,7 @@ class UserInteractionViewSet(viewsets.ViewSet):
             SwitterKafkaProducer.event(KAFKA_INTERACTION_TOPIC, follow, "unfollow")
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @followers.mapping.get
+    @follow.mapping.get
     def list_followers(self, request, pk=None):
         user = get_object_or_404(User, id=pk)
         followers = FollowLinks.objects.filter(following=user)
