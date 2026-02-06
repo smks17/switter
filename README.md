@@ -18,6 +18,11 @@ The project uses **Apache Kafka** for asynchronous communication between service
 
 ---
 
+## API Documentation (Swagger)
+All API endpoints are documented with Swagger UI, which provides an interactive interface to explore and test the API. You can access it at `/swagger/` to view available routes, required parameters, response formats, and try out requests directly from your browser. An alternative documentation UI is available at `/redoc/`.
+
+---
+
 ## Requirements
 
 * Python3.12
@@ -120,6 +125,8 @@ Topics was defined in `kafka-init/`
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+kafka-init/create-topics.sh
+kafka-init/init-server
 python manage.py migrate
 python manage.py runserver
 ```
@@ -130,12 +137,13 @@ Kafka and PostgreSQL must be running separately in this mode.
 
 ## Example API Endpoints
 
-| Endpoint                                     | Method     | Description          |
-| -------------------------------------------- | ---------- | -------------------- |
-| `/api/users/`                                | GET / POST | List or create users |
-| `/api/social/posts/`                         | GET / POST | List or create posts |
-| `/api/social/feed/`                          | GET        | User feed            |
-| `/api/social/posts/<post_id>/<like|comment>` | POST       | Like or comment      |
+| Endpoint                                     | Method        | Description             |
+| -------------------------------------------- | ------------- | ----------------------- |
+| `/api/users/`                                | POST          | Create user             |
+| `/api/social/posts/`                         | GET / POST    | List or create posts    |
+| `/api/social/posts/explore`                  | GET           | User feed               |
+| `/api/social/posts/<post_id>/<like|comment>` | POST          | Like or comment         |
+| `/api/social/users/<user_id>/follow`         | POST / DELETE | Follow or unfollow user |
 
 ---
 

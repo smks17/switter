@@ -14,8 +14,8 @@ import os
 from pathlib import Path
 
 import dotenv
-from kafka import KafkaProducer
-
+from drf_yasg import openapi
+from drf_yasg.inspectors import SwaggerAutoSchema
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "drf_yasg",
     "rest_framework",
     "rest_framework.authtoken",
     "users",
@@ -161,6 +162,27 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+
+class BearerSwaggerAutoSchema(SwaggerAutoSchema):
+    def get_security(self):
+        security = super().get_security()
+        if security is None:
+            return [{"Bearer": []}]
+        return security
+
+
+SWAGGER_SETTINGS = {
+    "SECURITY_DEFINITIONS": {
+        "Bearer": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header",
+            "description": "JWT Authorization header. Example: 'Bearer <token>'",
+        }
+    },
+    "USE_SESSION_AUTH": False,
+    "DEFAULT_AUTO_SCHEMA_CLASS": "switter.settings.BearerSwaggerAutoSchema",
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/

@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
-from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
-from rest_framework.views import APIView
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.generics import GenericAPIView
 from rest_framework import status, permissions
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
@@ -9,14 +9,15 @@ from rest_framework.permissions import AllowAny
 from users.serializer import LoginSerializer, SignUpSerializer, UserSerializer
 
 
-class SignUpView(APIView):
+class SignUpView(GenericAPIView):
     permission_classes = [AllowAny]
+    serializer_class = SignUpSerializer
 
     def post(self, request):
         serializer = SignUpSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            return JsonResponse(
+            return Response(
                 {
                     "id": user.id,
                     "username": user.username,
@@ -28,8 +29,9 @@ class SignUpView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class LoginView(APIView):
+class LoginView(GenericAPIView):
     permission_classes = [AllowAny]
+    serializer_class = LoginSerializer
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
@@ -37,16 +39,20 @@ class LoginView(APIView):
         return Response(serializer.validated_data)
 
 
-class MyProfileView(APIView):
+class MyProfileView(GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = UserSerializer
+    authentication_classes = [JWTAuthentication]
 
     def get(self, request):
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
 
 
-class UserProfileView(APIView):
+class UserProfileView(GenericAPIView):
     permission_classes = [permissions.AllowAny]
+    serializer_class = UserSerializer
+    authentication_classes = [JWTAuthentication]
 
     def get(self, request, user_id):
         user = get_object_or_404(User, id=user_id)

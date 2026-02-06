@@ -9,6 +9,7 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from posts.models import MediaPost, Post
 from posts.serializer import PostSerializer
@@ -27,9 +28,11 @@ class PostViewSet(viewsets.ModelViewSet):
         Post.objects.all()
         .select_related("author")
         .prefetch_related("media", "likes", "comments")
+        .annotate(like_count=Count("likes"), comment_count=Count("comments"))
     )
     serializer_class = PostSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    authentication_classes = [JWTAuthentication]
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
@@ -127,6 +130,7 @@ class PostViewSet(viewsets.ModelViewSet):
 
 class DownloadView(APIView):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    authentication_classes = [JWTAuthentication]
 
     def get(self, request, file_id):
         media_file = get_object_or_404(MediaPost, id=file_id)

@@ -3,6 +3,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import permissions, viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from interactions.models import FollowLinks, Like, Comment
 from interactions.serializer import FollowSerializer, LikeSerializer, CommentSerializer
@@ -14,6 +15,7 @@ from switter.utils import user_cached
 
 class PostInteractionViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    authentication_classes = [JWTAuthentication]
 
     # -------- Likes --------
 
@@ -75,6 +77,7 @@ class PostInteractionViewSet(viewsets.ViewSet):
 
 class UserInteractionViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
 
     # -------- Followers --------
 

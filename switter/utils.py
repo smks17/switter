@@ -3,6 +3,8 @@ from django.core.cache import cache
 from rest_framework.response import Response
 from functools import wraps
 
+from switter.settings import USE_CACHE
+
 
 def create_user_cache(user_id, request_path):
     return f"user:{user_id}:{request_path}"
@@ -13,7 +15,7 @@ def user_cached(timeout=300):
         @wraps(view_func)
         def wrapper(obj, request, *args, **kwargs):
             user = getattr(request, "user", None)
-            if not user or not user.is_authenticated:
+            if not USE_CACHE and (not user or not user.is_authenticated):
                 return view_func(obj, request, *args, **kwargs)
 
             cache_key = create_user_cache(user.id, request.get_full_path())
