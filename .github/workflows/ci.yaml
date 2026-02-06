@@ -56,6 +56,7 @@ jobs:
           DJANGO_SETTINGS_MODULE: switter.settings
           DJANGO_KEY: $DJANGO_KEY
           FEED_SERVICE_URL: feed # temp
+          FEED_SERVICE_TOKEN: feed # temp
         run: python manage.py migrate
 
       - name: Run Tests
