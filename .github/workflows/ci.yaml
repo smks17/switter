@@ -45,14 +45,28 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run Migrations
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: postgres_db
+          REDIS_URL: localhost
+          REDIS_PORT: 6379
+          DJANGO_SETTINGS_MODULE: switter.settings
+          DJANGO_KEY: $DJANGO_KEY
         run: python manage.py migrate
 
       - name: Run Tests
         env:
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/switter_db
-          REDIS_URL: redis://localhost:6379/0
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: postgres_db
+          REDIS_URL: localhost
+          REDIS_PORT: 6379
           DJANGO_SETTINGS_MODULE: switter.settings
-          USE_KAFKA: "False"
-          SECRET_KEY: "test-secret-key-for-ci" # TODO: use private variable
+          DJANGO_KEY: $DJANGO_KEY
         run: |
           python manage.py test
