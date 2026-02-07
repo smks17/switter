@@ -6,15 +6,24 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: switter_db
+      POSTGRES_HOST: localhost
+      DJANGO_SETTINGS_MODULE: switter.settings
+      DJANGO_KEY: ${{ secrets.DJANGO_KEY }}
+      REDIS_HOST: localhost
+      USE_KAFKA: "False"
+
     services:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_DB: switter_db
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
+          POSTGRES_DB: switter_db
+        ports: ["5432:5432"]
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -23,18 +32,12 @@ jobs:
 
       redis:
         image: redis:7
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+        ports: ["6379:6379"]
 
     steps:
       - uses: actions/checkout@v3
 
-      - name: Set up Python 3.12
+      - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.12"
@@ -44,31 +47,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run Migrations
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_HOST: localhost
-          POSTGRES_PORT: 5432
-          POSTGRES_DB: postgres_db
-          REDIS_URL: localhost
-          REDIS_PORT: 6379
-          DJANGO_SETTINGS_MODULE: switter.settings
-          DJANGO_KEY: $DJANGO_KEY
-          FEED_SERVICE_URL: feed # temp
-          FEED_SERVICE_TOKEN: feed # temp
-        run: python manage.py migrate
-
-      - name: Run Tests
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_HOST: localhost
-          POSTGRES_PORT: 5432
-          POSTGRES_DB: postgres_db
-          REDIS_URL: localhost
-          REDIS_PORT: 6379
-          DJANGO_SETTINGS_MODULE: switter.settings
-          DJANGO_KEY: $DJANGO_KEY
+      - name: Database Prep & Test
         run: |
+          python manage.py migrate
           python manage.py test
