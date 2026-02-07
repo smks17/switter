@@ -134,8 +134,8 @@ CACHE_MIDDLEWARE_SECONDS = 60 * 5
 CACHE_MIDDLEWARE_KEY_PREFIX = ""
 USE_CACHE = True
 
-FEED_SERVICE_URL = os.environ["FEED_SERVICE_URL"]
-FEED_SERVICE_TOKEN = os.environ["FEED_SERVICE_TOKEN"]
+FEED_SERVICE_URL = os.environ.get("FEED_SERVICE_URL", "localhost:8080")
+FEED_SERVICE_TOKEN = os.environ.get("FEED_SERVICE_TOKEN")
 
 KAFKA_URL = os.environ.get("KAFKA_URL", "localhost:9092")
 KAFKA_POST_TOPIC = os.environ.get("KAFKA_POST_TOPIC", "switter-post-events")
